@@ -1,0 +1,117 @@
+blueprint:
+  name: Tradfri Cast Control
+  description: Control a Google media player with 5 button tradfri remote controller on deconz.
+  domain: automation
+  input:
+    media:
+      name: Media player
+      description: Google Cast entity.
+      selector:
+        entity:
+          integration: cast
+    remote:
+      name: Remote
+      description: IKEA remote to use.
+      selector:
+        device:
+          integration: deconz
+          manufacturer: IKEA of Sweden
+          model: TRADFRI remote control
+    seek:
+      name: Seek
+      description: Seconds to skip while seeking.
+      default: 10.0
+      selector:
+        number:
+          min: 1.0
+          max: 60.0
+          mode: slider
+          step: 1.0
+          unit_of_measurement: seconds
+    power_external:
+      name: External power switch
+      description: Use a switch entity for "turn on" and "turn off" commands.
+      default: false
+      selector:
+        boolean: {}
+    switch:
+      name: Switch
+      description: define an external switch entity.
+      selector:
+        entity:
+          domain: switch
+
+variables:
+  power_external: !input 'power_external'
+  seek_seconds: !input 'seek'
+  media_entity: !input 'media'
+  mute_new_state: '{{ not state_attr(media_entity, "is_volume_muted") }}'
+  seek_positive: '{{ as_timestamp(now()) - as_timestamp(state_attr(media_entity, "media_position_updated_at")) + state_attr(media_entity, "media_position") | float(default=0) | round(0) + seek_seconds }}'
+  seek_negative: '{{ as_timestamp(now()) - as_timestamp(state_attr(media_entity, "media_position_updated_at")) + state_attr(media_entity, "media_position") | float(default=0) | round(0) - seek_seconds }}'
+ 
+trigger:
+- platform: event
+  event_type: deconz_event
+  event_data:
+    device_id: !input 'remote'
+action:
+- variables:
+    event: '{{ trigger.event.data.event }}'
+- choose:
+  - conditions:
+    - '{{ event == 1001 }}'
+    sequence:
+    - choose:
+      - conditions: '{{ power_external }}'
+        sequence:
+        - service: switch.toggle
+          entity_id: !input 'switch'
+      default:
+      - service: media_player.toggle
+        entity_id: !input 'media'
+  - conditions:
+    - '{{ event == 1002 }}'
+    sequence:
+    - service: media_player.media_play_pause
+      entity_id: !input 'media'
+  - conditions:
+    - '{{ event == 2002 }}'
+    sequence:
+    - service: media_player.volume_up
+      entity_id: !input 'media'
+  - conditions:
+    - '{{ event == 3002 }}'
+    sequence:
+    - service: media_player.volume_down
+      entity_id: !input 'media'
+  - conditions:
+    - '{{ event == 3001 }}'
+    sequence:
+    - service: media_player.volume_mute
+      entity_id: !input 'media'
+      data:
+        is_volume_muted: '{{ mute_new_state }}'
+  - conditions:
+    - '{{ event == 4002 }}'
+    sequence:
+    - service: media_player.media_seek
+      entity_id: !input 'media'
+      data: 
+        seek_position: '{{ seek_negative }}'  
+  - conditions:
+    - '{{ event == 4001 }}'
+    sequence:
+    - service: media_player.media_previous_track
+      entity_id: !input 'media'
+  - conditions:
+    - '{{ event == 5002 }}'
+    sequence:
+    - service: media_player.media_seek
+      entity_id: !input 'media'
+      data: 
+        seek_position: '{{ seek_positive }}'  
+  - conditions:
+    - '{{ event == 5001 }}'
+    sequence:
+    - service: media_player.media_next_track
+      entity_id: !input 'media'
