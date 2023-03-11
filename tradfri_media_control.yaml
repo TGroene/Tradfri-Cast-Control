@@ -1,17 +1,18 @@
 blueprint:
-  name: Tradfri Cast Control
-  description: Control a Google media player with 5 button tradfri remote controller on deconz.
+  source_url: https://github.com/TGroene/Tradfri-Cast-Control/blob/main/tradfri_media_control.yaml
+  name: Tradfri Cast control
+  description: Control a Google media player with 5 button tradfri remote controllers
   domain: automation
   input:
     media:
       name: Media player
-      description: Google Cast entity.
+      description: Google Cast entity
       selector:
         entity:
           integration: cast
     remote:
       name: Remote
-      description: IKEA remote to use.
+      description: IKEA remote to use
       selector:
         device:
           integration: deconz
@@ -19,7 +20,7 @@ blueprint:
           model: TRADFRI remote control
     seek:
       name: Seek
-      description: Seconds to skip while seeking.
+      description: Seconds to skip while seeking
       default: 10.0
       selector:
         number:
@@ -29,14 +30,13 @@ blueprint:
           step: 1.0
           unit_of_measurement: seconds
     power_external:
-      name: External power switch
-      description: Use a switch entity for "turn on" and "turn off" commands.
+      name: Power switch
+      description: Use a switch entity for turn on and off
       default: false
       selector:
         boolean: {}
     switch:
       name: Switch
-      description: define an external switch entity.
       selector:
         entity:
           domain: switch
@@ -99,9 +99,9 @@ action:
       data: 
         seek_position: '{{ seek_negative }}'  
   - conditions:
-    - '{{ event == 4001 }}'
+    - '{{ event == 3001 }}'
     sequence:
-    - service: media_player.media_previous_track
+    - service: media_player.media_next_track
       entity_id: !input 'media'
   - conditions:
     - '{{ event == 5002 }}'
